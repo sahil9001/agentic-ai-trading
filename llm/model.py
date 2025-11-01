@@ -1,19 +1,22 @@
 """LLM model initialization and configuration."""
 import os
-from langchain.chat_models import init_chat_model
+from langchain_deepseek import ChatDeepSeek
 from dotenv import load_dotenv
 
 load_dotenv()  # optional, for local .env files
 
 def get_model(temperature: float = 0):
-    """Initialize and return the chat model."""
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("Missing OPENAI_API_KEY environment variable.")
+    """Initialize and return the DeepSeek-R1 chat model.
     
-    return init_chat_model(
-        "gpt-5-mini",
-        model_provider="openai",
-        api_key=api_key,
+    Note: DeepSeek-R1 may not support temperature parameter,
+    but we keep it for compatibility with the interface.
+    """
+    api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("Missing DEEPSEEK_API_KEY or OPENAI_API_KEY environment variable.")
+    
+    return ChatDeepSeek(
+        model="deepseek-reasoner",
         temperature=temperature
+        # other params...
     )

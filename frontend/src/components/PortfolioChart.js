@@ -6,41 +6,90 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceLine
 } from 'recharts';
 
+const BASE_VALUE = 5000;
+
 const PortfolioChart = ({ data }) => {
-  // Format data for the chart
-  const chartData = data.map(item => ({
-    time: new Date(item.timestamp).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }),
-    timestamp: item.timestamp,
-    total: parseFloat(item.total),
-    available: parseFloat(item.available)
-  }));
+  // Format data for the chart with profit/loss calculation
+  const chartData = data.map(item => {
+    const total = parseFloat(item.total);
+    const change = total - BASE_VALUE;
+    const percentChange = ((change / BASE_VALUE) * 100).toFixed(2);
+    
+    return {
+      time: new Date(item.timestamp).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      timestamp: item.timestamp,
+      total: total,
+      change: change,
+      percentChange: percentChange,
+      isProfit: change >= 0
+    };
+  });
+
+  // Calculate Y-axis domain to center around 5000
+  const values = chartData.map(d => d.total);
+  const minValue = Math.min(...values, BASE_VALUE);
+  const maxValue = Math.max(...values, BASE_VALUE);
+  const range = Math.max(maxValue - BASE_VALUE, BASE_VALUE - minValue);
+  const yAxisDomain = [
+    BASE_VALUE - range * 1.1,
+    BASE_VALUE + range * 1.1
+  ];
+
+  // Get line color based on latest value
+  const latestData = chartData[chartData.length - 1];
+  const lineColor = latestData?.isProfit ? '#10b981' : '#ef4444';
 
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const change = data.change;
+      const isProfit = change >= 0;
+      
       return (
         <div className="custom-tooltip" style={{
           backgroundColor: 'white',
-          padding: '10px',
-          border: '1px solid #ccc',
-          borderRadius: '5px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          padding: '12px 16px',
+          border: '1px solid #e5e7eb',
+          borderRadius: '6px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          fontSize: '0.875rem'
         }}>
-          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{`${label}`}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ margin: '2px 0', color: entry.color }}>
-              {`${entry.name}: $${entry.value.toFixed(2)}`}
-            </p>
-          ))}
+          <p style={{ 
+            margin: '0 0 8px 0', 
+            fontWeight: 500,
+            color: '#1a1a1a',
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            {label}
+          </p>
+          <p style={{ 
+            margin: '0 0 4px 0', 
+            fontWeight: 600,
+            color: '#1a1a1a',
+            fontSize: '1.125rem'
+          }}>
+            ${data.total.toFixed(2)}
+          </p>
+          <p style={{ 
+            margin: 0, 
+            color: isProfit ? '#10b981' : '#ef4444',
+            fontWeight: 500,
+            fontSize: '0.875rem'
+          }}>
+            {isProfit ? '+' : ''}{data.change.toFixed(2)} ({isProfit ? '+' : ''}{data.percentChange}%)
+          </p>
         </div>
       );
     }
@@ -48,53 +97,52 @@ const PortfolioChart = ({ data }) => {
   };
 
   return (
-    <div className="chart-container" style={{
-      background: 'white',
-      padding: '30px',
-      borderRadius: '15px',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
-      marginTop: '20px'
-    }}>
-      <h2 style={{ marginBottom: '20px', color: '#333', textAlign: 'center' }}>
-        Portfolio Value Over Time
-      </h2>
-      <ResponsiveContainer width="100%" height={500}>
+    <div className="chart-container">
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
-          margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+          margin={{ top: 20, right: 20, left: 20, bottom: 40 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+          <CartesianGrid 
+            strokeDasharray="3 3" 
+            stroke="#f0f0f0" 
+            vertical={false}
+          />
+          <ReferenceLine 
+            y={BASE_VALUE} 
+            stroke="#d1d5db" 
+            strokeWidth={1}
+            strokeDasharray="2 2"
+            label={{ value: 'Base ($5,000)', position: 'right', fill: '#9ca3af', fontSize: 12 }}
+          />
           <XAxis
             dataKey="time"
             angle={-45}
             textAnchor="end"
-            height={100}
-            stroke="#666"
+            height={80}
+            stroke="#9ca3af"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
             interval="preserveStartEnd"
           />
           <YAxis
-            stroke="#666"
-            tickFormatter={(value) => `$${value.toFixed(0)}`}
+            stroke="#9ca3af"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tickFormatter={(value) => {
+              const diff = value - BASE_VALUE;
+              if (diff === 0) return '$5,000';
+              const sign = diff > 0 ? '+' : '';
+              return `${sign}$${diff.toFixed(0)}`;
+            }}
+            domain={yAxisDomain}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
           <Line
             type="monotone"
             dataKey="total"
-            stroke="#667eea"
-            strokeWidth={3}
-            dot={{ r: 4 }}
-            activeDot={{ r: 7 }}
-            name="Total Portfolio Value"
-          />
-          <Line
-            type="monotone"
-            dataKey="available"
-            stroke="#48bb78"
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            activeDot={{ r: 6 }}
-            name="Available Balance"
+            stroke={lineColor}
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 6, fill: lineColor, strokeWidth: 2, stroke: 'white' }}
           />
         </LineChart>
       </ResponsiveContainer>

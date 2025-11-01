@@ -15,3 +15,5 @@ portfolio.db
 
 .env
 test_*.py
+
+node_modules/
