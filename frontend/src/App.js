@@ -39,26 +39,47 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const BASE_VALUE = 5000;
+  
+  const calculateStats = () => {
+    if (!latestData) return null;
+    
+    const total = parseFloat(latestData.total);
+    const change = total - BASE_VALUE;
+    const percentChange = ((change / BASE_VALUE) * 100).toFixed(2);
+    const isProfit = change >= 0;
+    
+    return {
+      total,
+      change,
+      percentChange,
+      isProfit
+    };
+  };
+
+  const stats = calculateStats();
+
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Trader AI - Portfolio Dashboard</h1>
-        {latestData && (
+        <h1>Trader AI</h1>
+        {stats && (
           <div className="latest-stats">
             <div className="stat-item">
-              <span className="stat-label">Total Value:</span>
-              <span className="stat-value">${parseFloat(latestData.total).toFixed(2)}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">Available:</span>
-              <span className="stat-value">${parseFloat(latestData.available).toFixed(2)}</span>
+              <span className="stat-label">Current Value</span>
+              <span className={`stat-value ${stats.isProfit ? 'profit' : stats.change < 0 ? 'loss' : 'neutral'}`}>
+                ${stats.total.toFixed(2)}
+              </span>
+              <span className={`stat-change ${stats.isProfit ? 'profit' : 'loss'}`}>
+                {stats.isProfit ? '+' : ''}{stats.change.toFixed(2)} ({stats.isProfit ? '+' : ''}{stats.percentChange}%)
+              </span>
             </div>
           </div>
         )}
       </header>
       
       <main className="App-main">
-        {loading && <div className="loading">Loading portfolio data...</div>}
+        {loading && <div className="loading">Loading...</div>}
         
         {error && (
           <div className="error">
