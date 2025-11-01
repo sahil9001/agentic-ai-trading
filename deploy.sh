@@ -4,6 +4,7 @@ set -e
 echo "=== Starting Deployment ==="
 
 # Navigate to project directory
+source ~/.bashrc
 cd ~/trader-ai
 
 # Step 1: Update Python dependencies
