@@ -16,7 +16,7 @@ export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 # Function to find uv
 find_uv() {
     # Check if uv is in PATH
-    if command -v uv &> /dev/null; then
+if command -v uv &> /dev/null; then
         command -v uv
         return 0
     fi
@@ -31,9 +31,23 @@ find_uv() {
 }
 
 UV_CMD=$(find_uv)
+PROJECT_DIR=$(pwd)
+PYTHON_CMD=""
 if [ -n "$UV_CMD" ]; then
     echo "Found uv at: $UV_CMD"
     "$UV_CMD" sync
+    # uv creates .venv by default
+    if [ -f "$PROJECT_DIR/.venv/bin/python3" ]; then
+        PYTHON_CMD="$PROJECT_DIR/.venv/bin/python3"
+        echo "Using Python from uv environment: $PYTHON_CMD"
+    elif [ -f "$PROJECT_DIR/.venv/bin/python" ]; then
+        PYTHON_CMD="$PROJECT_DIR/.venv/bin/python"
+        echo "Using Python from uv environment: $PYTHON_CMD"
+    else
+        echo "Warning: .venv not found after uv sync, checking alternative locations..."
+        # Fallback to system python - uv might have installed globally
+        PYTHON_CMD="/usr/bin/python3"
+    fi
 else
     echo "uv not found, creating virtual environment and using pip..."
     # Create venv if it doesn't exist
@@ -42,6 +56,23 @@ else
     fi
     source venv/bin/activate
     pip install -e .
+    if [ -f "$PROJECT_DIR/venv/bin/python3" ]; then
+        PYTHON_CMD="$PROJECT_DIR/venv/bin/python3"
+    else
+        PYTHON_CMD="$PROJECT_DIR/venv/bin/python"
+    fi
+    echo "Using Python from venv: $PYTHON_CMD"
+fi
+
+# Fallback to system python if no venv found
+if [ -z "$PYTHON_CMD" ] || [ ! -f "$PYTHON_CMD" ]; then
+    PYTHON_CMD="/usr/bin/python3"
+    echo "Warning: No virtual environment found, using system Python: $PYTHON_CMD"
+fi
+
+# Ensure Python path is absolute
+if [[ "$PYTHON_CMD" != /* ]]; then
+    PYTHON_CMD="$(realpath "$PYTHON_CMD" 2>/dev/null || echo "$PYTHON_CMD")"
 fi
 
 # Step 2: Create .env file if it doesn't exist
@@ -72,9 +103,10 @@ cd ..
 
 # Step 5: Create systemd service files
 echo "Step 5: Creating systemd service files..."
+echo "Python command will be: $PYTHON_CMD"
 
 # Main trading agent service
-sudo tee /etc/systemd/system/trader-ai-main.service > /dev/null << 'EOF'
+sudo tee /etc/systemd/system/trader-ai-main.service > /dev/null << EOF
 [Unit]
 Description=Trader AI Main Trading Agent
 After=network.target
@@ -84,7 +116,7 @@ Type=simple
 User=root
 WorkingDirectory=/root/trader-ai
 Environment="PATH=/root/.local/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/usr/bin/python3 main.py
+ExecStart=$PYTHON_CMD main.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -95,7 +127,7 @@ WantedBy=multi-user.target
 EOF
 
 # API server service
-sudo tee /etc/systemd/system/trader-ai-api.service > /dev/null << 'EOF'
+sudo tee /etc/systemd/system/trader-ai-api.service > /dev/null << EOF
 [Unit]
 Description=Trader AI API Server
 After=network.target
@@ -105,7 +137,7 @@ Type=simple
 User=root
 WorkingDirectory=/root/trader-ai
 Environment="PATH=/root/.local/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/usr/bin/python3 api_server.py
+ExecStart=$PYTHON_CMD api_server.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
