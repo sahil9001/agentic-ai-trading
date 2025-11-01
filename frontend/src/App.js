@@ -3,7 +3,7 @@ import axios from 'axios';
 import PortfolioChart from './components/PortfolioChart';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 function App() {
   const [portfolioData, setPortfolioData] = useState([]);
