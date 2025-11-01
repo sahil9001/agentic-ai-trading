@@ -3,7 +3,19 @@ import axios from 'axios';
 import PortfolioChart from './components/PortfolioChart';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// Use relative URLs in production (nginx handles routing)
+// In development, use localhost for the API
+const getApiBaseUrl = () => {
+  // If explicitly set, use it (can be empty string for relative URLs)
+  if (process.env.REACT_APP_API_URL !== undefined) {
+    return process.env.REACT_APP_API_URL;
+  }
+  // In production build, use relative URLs (empty string)
+  // In development, use localhost
+  return process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 function App() {
   const [portfolioData, setPortfolioData] = useState([]);

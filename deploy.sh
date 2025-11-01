@@ -98,7 +98,8 @@ sudo systemctl stop trader-ai-frontend || true
 echo "Step 4: Setting up frontend..."
 cd frontend
 npm install --production
-npm run build
+# Build with empty API URL to use relative URLs (nginx handles routing)
+REACT_APP_API_URL= npm run build
 cd ..
 
 # Step 5: Create systemd service files
@@ -158,7 +159,6 @@ Type=simple
 User=root
 WorkingDirectory=/root/trader-ai/frontend/build
 Environment="PORT=3000"
-Environment="REACT_APP_API_URL=http://localhost:8000"
 ExecStart=/usr/bin/npx serve -s . -l 3000
 Restart=always
 RestartSec=10
