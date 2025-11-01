@@ -1,5 +1,6 @@
 """Main entry point for the trader-ai application."""
 
+import asyncio
 import time
 from utils.stock_data import get_indicators
 from utils.calculations import get_ema, get_atr, get_rsi, get_macd, get_mid_prices, calculate_sharpe_ratio
@@ -20,7 +21,7 @@ start_time = time.time()
 INITIAL_ACCOUNT_VALUE = 5000.0
 
 
-def invoke_agent():
+async def invoke_agent():
     """Main function to invoke the trading agent."""
     global invocation_count
     
@@ -206,30 +207,41 @@ def invoke_agent():
     print("=" * 80)
     print(enriched_prompt)
     print("=" * 80)
-    print("\nInvoking agent...\n")
+    print("\nInvoking agent with streaming...\n")
     
     # Build and invoke agent
     agent = build_agent(temperature=0, system_prompt=enriched_prompt)
     
     # Invoke agent with a ReAct-style prompt to trigger trading decision
     user_message = trading_decision_prompt.substitute()
-    response = agent.invoke({
+    
+    print("=" * 80)
+    print("AGENT RESPONSE (STREAMING):")
+    print("=" * 80)
+    
+    # Use astream for streaming responses
+    full_response_content = []
+    async for chunk in agent.astream({
         "messages": [("user", user_message)]
-    })
+    }):
+        # Process each chunk - chunks can be node outputs or streaming tokens
+        for node_name, node_output in chunk.items():
+            if isinstance(node_output, dict) and "messages" in node_output:
+                for msg in node_output["messages"]:
+                    if hasattr(msg, 'content') and msg.content:
+                        print(msg.content, end="", flush=True)
+                        full_response_content.append(msg.content)
+            elif isinstance(node_output, str):
+                # Direct string content
+                print(node_output, end="", flush=True)
+                full_response_content.append(node_output)
     
-    print("=" * 80)
-    print("AGENT RESPONSE:")
-    print("=" * 80)
-    # Extract the messages from the response
-    messages = response.get("messages", [])
-    for msg in messages:
-        print(f"{msg.__class__.__name__}: {msg.content}")
-    print("=" * 80)
+    print("\n" + "=" * 80)
     
-    return response
+    return {"messages": [{"content": "".join(full_response_content)}]}
 
 
-def main():
+async def main():
     """Run the trading agent in a loop every 5 minutes."""
     print("Starting trader-ai agent...")
     print("Will run every 5 minutes.")
@@ -238,17 +250,17 @@ def main():
     while True:
         try:
             print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Running agent invocation...")
-            invoke_agent()
+            await invoke_agent()
             print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Waiting 5 minutes until next invocation...\n")
-            time.sleep(60 * 5)  # Wait 5 minutes
+            await asyncio.sleep(60 * 5)  # Wait 5 minutes
         except KeyboardInterrupt:
             print("\n\nAgent stopped by user.")
             break
         except Exception as e:
             print(f"\nError during agent invocation: {e}")
             print("Waiting 5 minutes before retry...\n")
-            time.sleep(60 * 5)
+            await asyncio.sleep(60 * 5)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
