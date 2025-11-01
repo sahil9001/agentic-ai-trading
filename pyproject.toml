@@ -1,0 +1,17 @@
+[project]
+name = "trader-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dotenv>=0.9.9",
+    "langchain>=1.0.3",
+    "langchain-anthropic>=1.0.1",
+    "langchain-openai>=1.0.1",
+    "langgraph>=1.0.2",
+    "requests>=2.31.0",
+    "python-binance==1.0.31",
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+]
