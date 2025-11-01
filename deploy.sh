@@ -9,10 +9,38 @@ cd ~/trader-ai
 
 # Step 1: Update Python dependencies
 echo "Step 1: Installing/updating Python dependencies..."
-if command -v uv &> /dev/null; then
-    uv sync
+
+# Add common uv installation paths to PATH
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+
+# Function to find uv
+find_uv() {
+    # Check if uv is in PATH
+    if command -v uv &> /dev/null; then
+        command -v uv
+        return 0
+    fi
+    # Check common installation locations
+    for path in "$HOME/.cargo/bin/uv" "$HOME/.local/bin/uv" "/usr/local/bin/uv" "/opt/homebrew/bin/uv"; do
+        if [ -f "$path" ] && [ -x "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done
+    return 1
+}
+
+UV_CMD=$(find_uv)
+if [ -n "$UV_CMD" ]; then
+    echo "Found uv at: $UV_CMD"
+    "$UV_CMD" sync
 else
-    echo "uv not found, using pip..."
+    echo "uv not found, creating virtual environment and using pip..."
+    # Create venv if it doesn't exist
+    if [ ! -d "venv" ]; then
+        python3 -m venv venv
+    fi
+    source venv/bin/activate
     pip install -e .
 fi
 
