@@ -48,12 +48,29 @@ const PortfolioChart = ({ data }) => {
   const latestData = chartData[chartData.length - 1];
   const lineColor = latestData?.isProfit ? '#10b981' : '#ef4444';
 
+  // Format timestamp to IST (Indian Standard Time, UTC+5:30)
+  const formatIST = (timestamp) => {
+    const date = new Date(timestamp);
+    
+    return date.toLocaleString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    }) + ' IST';
+  };
+
   // Custom tooltip formatter
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const change = data.change;
       const isProfit = change >= 0;
+      const istTime = formatIST(data.timestamp);
       
       return (
         <div className="custom-tooltip" style={{
@@ -72,7 +89,7 @@ const PortfolioChart = ({ data }) => {
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
-            {label}
+            {istTime}
           </p>
           <p style={{ 
             margin: '0 0 4px 0', 
@@ -117,12 +134,7 @@ const PortfolioChart = ({ data }) => {
           />
           <XAxis
             dataKey="time"
-            angle={-45}
-            textAnchor="end"
-            height={80}
-            stroke="#9ca3af"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-            interval="preserveStartEnd"
+            hide={true}
           />
           <YAxis
             stroke="#9ca3af"
@@ -137,7 +149,7 @@ const PortfolioChart = ({ data }) => {
           />
           <Tooltip content={<CustomTooltip />} />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="total"
             stroke={lineColor}
             strokeWidth={2.5}
